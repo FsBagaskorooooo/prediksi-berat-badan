@@ -1,27 +1,48 @@
 import pandas as pd
-from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 import joblib
 
-# Baca file dataset
-df = pd.read_csv("ObesityDataSet_raw_and_data_sinthetic.csv")  # ganti sesuai nama file
+# Load dataset
+df = pd.read_csv("ObesityDataSet_raw_and_data_sinthetic.csv")
 
-# Encode semua kolom kategorikal kecuali target klasifikasi
-for col in df.select_dtypes(include='object').columns:
-    if col != 'NObeyesdad':
-        df[col] = LabelEncoder().fit_transform(df[col])
+# Label encode fitur kategorikal
+label_encoders = {}
+for col in df.select_dtypes(include="object").columns:
+    if col != "NObeyesdad":
+        le = LabelEncoder()
+        df[col] = le.fit_transform(df[col])
+        label_encoders[col] = le
 
-# Buang kolom target klasifikasi
-X = df.drop(columns=['Weight', 'NObeyesdad'])
-y = df['Weight']
+# Fitur terpilih
+selected_features = [
+    "Height",
+    "family_history_with_overweight",
+    "FAVC",
+    "CAEC",
+    "Age",
+    "Gender",
+    "NCP",    # akan dibalik nilainya di app.py
+    "FAF",
+    "TUE",    # dibalik juga di app.py
+    "CALC"    # juga dibalik nilainya di app.py
+]
 
-# Split dan latih
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-model = LinearRegression()
+X = df[selected_features]
+y = df["Weight"]
+
+# Scaling
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+# Train/Test split dan training
+X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+model = RandomForestRegressor(random_state=42)
 model.fit(X_train, y_train)
 
-# Simpan model
-joblib.dump(model, "model_weight_15_features.pkl")
+# Simpan model dan scaler
+joblib.dump(model, "model_rf_selected.pkl")
+joblib.dump(scaler, "scaler_selected.pkl")
 
-print("✅ Model dilatih ulang & disimpan sebagai model_weight_15_features.pkl")
+print("✅ Model dan scaler berhasil dilatih dan disimpan ulang.")
